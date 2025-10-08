@@ -126,12 +126,13 @@ with SpheroEduAPI(toy) as api:
             if strength < DEADZONE:
                 strength = 0.0
 
-            # Drive Sphero
             if strength > 0:
                 heading = int((math.degrees(math.atan2(-y_axis, x_axis)) - 90 + angle_offset) % 360)
-                api.set_heading(heading)  # ✅ cast to int
+                api._SpheroEduAPI__heading = heading   # update internal heading
+                api.set_heading(heading)
                 api.set_speed(speed)
             else:
+                api._SpheroEduAPI__heading = 0         # reset internal heading
                 api.set_speed(0)
 
             # Battery check every interval
