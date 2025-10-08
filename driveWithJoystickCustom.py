@@ -44,6 +44,9 @@ with SpheroEduAPI(toy) as api:
 
     api.set_front_led(Color(0, 255, 0))  # Green = ready
 
+    # ----------------------------
+    # Helper Functions
+    # ----------------------------
     def get_battery_level():
         try:
             return Power.get_battery_voltage(toy)
@@ -61,12 +64,18 @@ with SpheroEduAPI(toy) as api:
         elif speed == 200:
             api.set_matrix_character("4", Color(255, 0, 0))
 
+    # ----------------------------
+    # Control Variables
+    # ----------------------------
     angle = 0
     angle_offset = 0
     speed = 50
     last_battery_time = time.time()
     clock = pygame.time.Clock()
 
+    # ----------------------------
+    # Main Loop
+    # ----------------------------
     try:
         while True:
             for event in pygame.event.get():
@@ -87,15 +96,18 @@ with SpheroEduAPI(toy) as api:
 
             joystick = joysticks[0]
 
+            # Axis values
             x_axis = joystick.get_axis(0)
             y_axis = joystick.get_axis(1)
 
+            # Shoulder buttons for calibration
             if joystick.get_button(4):  # LB
                 angle_offset += 2
             if joystick.get_button(5):  # RB
                 angle_offset -= 2
             angle_offset %= 360
 
+            # Speed tier buttons
             if joystick.get_button(0):  # A
                 speed = 50
                 set_speed_color(speed)
@@ -109,18 +121,20 @@ with SpheroEduAPI(toy) as api:
                 speed = 200
                 set_speed_color(speed)
 
+            # Calculate stick strength
             strength = math.sqrt(x_axis ** 2 + y_axis ** 2)
             if strength < DEADZONE:
                 strength = 0.0
 
+            # Drive Sphero
             if strength > 0:
-                angle = math.degrees(math.atan2(-y_axis, x_axis)) - 90 + angle_offset
-                angle %= 360
-                api.set_heading(angle)
+                heading = int((math.degrees(math.atan2(-y_axis, x_axis)) - 90 + angle_offset) % 360)
+                api.set_heading(heading)  # ✅ cast to int
                 api.set_speed(speed)
             else:
                 api.set_speed(0)
 
+            # Battery check every interval
             if time.time() - last_battery_time >= BATTERY_CHECK_INTERVAL:
                 voltage = get_battery_level()
                 if voltage:
