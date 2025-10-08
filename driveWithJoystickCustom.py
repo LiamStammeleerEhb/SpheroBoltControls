@@ -127,7 +127,9 @@ with SpheroEduAPI(toy) as api:
                 strength = 0.0
 
             if strength > 0:
-                heading = int((math.degrees(math.atan2(-y_axis, -x_axis)) - 90 + angle_offset) % 360)
+                x_axis_fixed = -x_axis
+                y_axis_fixed = -y_axis 
+                heading = int((math.degrees(math.atan2(y_axis_fixed, x_axis_fixed))) % 360)
                 api._SpheroEduAPI__heading = heading   # update internal heading
                 api.set_heading(heading)
                 api.set_speed(speed)
