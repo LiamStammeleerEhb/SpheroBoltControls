@@ -131,14 +131,17 @@ with SpheroEduAPI(toy) as api:
                 strength = 0.0
 
             if strength > 0:
-                x_axis_fixed = -x_axis
-                y_axis_fixed = -y_axis 
-                heading = int((math.degrees(math.atan2(y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
+                # Use axes as-is from the joystick, no negation
+                x_axis_fixed = x_axis
+                y_axis_fixed = y_axis
+
+                # Calculate heading
+                heading = int((math.degrees(math.atan2(-y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
+                # Apply to Sphero
                 api._SpheroEduAPI__heading = heading
                 api.set_heading(heading)
-                api.set_speed(speed)
+                api.set_speed(speed if strength > 0 else 0)
             else:
-                api._SpheroEduAPI__heading = 0         # reset internal heading
                 api.set_speed(0)
 
             # Battery check every interval
