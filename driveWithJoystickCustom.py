@@ -101,9 +101,9 @@ with SpheroEduAPI(toy) as api:
             y_axis = joystick.get_axis(1)
 
             # Shoulder buttons for calibration
-            if joystick.get_button(4):  # LB
+            if joystick.get_button(6):  # LB
                 angle_offset += 2
-            if joystick.get_button(5):  # RB
+            if joystick.get_button(7):  # RB
                 angle_offset -= 2
             angle_offset %= 360
 
@@ -129,8 +129,8 @@ with SpheroEduAPI(toy) as api:
             if strength > 0:
                 x_axis_fixed = -x_axis
                 y_axis_fixed = -y_axis 
-                heading = int((math.degrees(math.atan2(y_axis_fixed, x_axis_fixed))) % 360)
-                api._SpheroEduAPI__heading = heading   # update internal heading
+                heading = int((math.degrees(math.atan2(-y_axis, x_axis)) + angle_offset) % 360)
+                api._SpheroEduAPI__heading = heading
                 api.set_heading(heading)
                 api.set_speed(speed)
             else:
