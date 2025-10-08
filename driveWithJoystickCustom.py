@@ -131,16 +131,12 @@ with SpheroEduAPI(toy) as api:
                 strength = 0.0
 
             if strength > 0:
-                # Use axes as-is from the joystick, no negation
-                x_axis_fixed = x_axis
+                x_axis_fixed = -x_axis  # flip left/right for NACON/Xbox
                 y_axis_fixed = y_axis
-
-                # Calculate heading
-                heading = int((math.degrees(math.atan2(y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
-                # Apply to Sphero
+                heading = int((math.degrees(math.atan2(-y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
                 api._SpheroEduAPI__heading = heading
                 api.set_heading(heading)
-                api.set_speed(speed if strength > 0 else 0)
+                api.set_speed(speed)
             else:
                 api.set_speed(0)
 
