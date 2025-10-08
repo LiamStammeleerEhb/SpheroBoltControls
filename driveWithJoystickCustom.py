@@ -12,73 +12,46 @@ from spherov2.commands.power import Power
 # ----------------------------
 DEADZONE = 0.1
 FPS = 60
-ARROW_SIZE = 100
 BATTERY_CHECK_INTERVAL = 30  # seconds
 
 # ----------------------------
-# Pygame Initialization
+# Pygame Joystick Initialization
 # ----------------------------
 pygame.init()
-pygame.font.init()
 pygame.joystick.init()
 
-# Check joystick
-if pygame.joystick.get_count() == 0:
-    print("No joystick detected.")
+joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]
+for joy in joysticks:
+    print(f"🎮 Joystick detected: {joy.get_name()}")
+
+if not joysticks:
+    print("❌ No controller detected.")
     sys.exit(1)
-
-joystick = pygame.joystick.Joystick(0)
-joystick.init()
-print(f"Joystick initialized: {joystick.get_name()}")
-
-# Screen setup
-screen_width, screen_height = 800, 600
-screen = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Sphero Control + Visualization")
-font = pygame.font.Font(None, 24)
-
-# Load arrow image
-arrow_image = pygame.image.load("arrow.png")
-arrow_image = pygame.transform.scale(arrow_image, (ARROW_SIZE, ARROW_SIZE))
-arrow_location = (screen_width / 2, screen_height / 2)
-
-clock = pygame.time.Clock()
 
 # ----------------------------
 # Sphero Initialization
 # ----------------------------
-toy_name = input("Enter Sphero toy name (e.g. SB-XXXX): ").strip()
-
-print("Searching for Sphero...")
-toy = scanner.find_toy(toy_name=toy_name)
+toy_name = input("Enter Sphero toy name (e.g. SB-XXXX, or press Enter for auto): ").strip()
+print("🔍 Searching for Sphero...")
+toy = scanner.find_toy(toy_name=toy_name or None)
 if not toy:
-    print(f"Could not find Sphero with name {toy_name}")
+    print("❌ Could not find any Sphero.")
     sys.exit(1)
 
-print(f"Connecting to {toy_name}...")
+print(f"🔗 Connecting to {toy.name}...")
 with SpheroEduAPI(toy) as api:
-    print(f"Connected to {toy_name} ✅")
+    print(f"✅ Connected to {toy.name}")
 
-    # LED Green means ready
-    api.set_front_led(Color(0, 255, 0))
-
-    # ----------------------------
-    # Helper Functions
-    # ----------------------------
-    def draw_text(text, color, x, y):
-        img = font.render(text, True, color)
-        screen.blit(img, (x, y))
+    api.set_front_led(Color(0, 255, 0))  # Green = ready
 
     def get_battery_level():
         try:
-            voltage = Power.get_battery_voltage(toy)
-            return voltage
+            return Power.get_battery_voltage(toy)
         except Exception as e:
-            print(f"Battery check failed: {e}")
+            print(f"[Battery] Check failed: {e}")
             return None
 
     def set_speed_color(speed):
-        """Change LED color based on speed tier."""
         if speed == 50:
             api.set_matrix_character("1", Color(255, 200, 0))
         elif speed == 70:
@@ -88,58 +61,58 @@ with SpheroEduAPI(toy) as api:
         elif speed == 200:
             api.set_matrix_character("4", Color(255, 0, 0))
 
-    # ----------------------------
-    # Control Variables
-    # ----------------------------
     angle = 0
     angle_offset = 0
     speed = 50
     last_battery_time = time.time()
+    clock = pygame.time.Clock()
 
-    # ----------------------------
-    # Main Loop
-    # ----------------------------
     try:
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    api.set_speed(0)
-                    pygame.quit()
-                    sys.exit()
+                    raise KeyboardInterrupt
+                if event.type == pygame.JOYDEVICEADDED:
+                    joy = pygame.joystick.Joystick(event.device_index)
+                    joysticks.append(joy)
+                    print(f"🎮 Controller added: {joy.get_name()}")
+                if event.type == pygame.JOYDEVICEREMOVED:
+                    joysticks = [j for j in joysticks if j.get_instance_id() != event.instance_id]
+                    print(f"❌ Controller removed. Remaining: {len(joysticks)}")
 
-            screen.fill((20, 20, 20))
+            if not joysticks:
+                api.set_speed(0)
+                clock.tick(FPS)
+                continue
 
-            # Joystick axes
+            joystick = joysticks[0]
+
             x_axis = joystick.get_axis(0)
             y_axis = joystick.get_axis(1)
 
-            # Shoulder buttons for calibration (offset rotation)
-            if joystick.get_button(4):  # L1
+            if joystick.get_button(4):  # LB
                 angle_offset += 2
-            if joystick.get_button(5):  # R1
+            if joystick.get_button(5):  # RB
                 angle_offset -= 2
             angle_offset %= 360
 
-            # Speed tier buttons
-            if joystick.get_button(0):
+            if joystick.get_button(0):  # A
                 speed = 50
                 set_speed_color(speed)
-            if joystick.get_button(1):
+            if joystick.get_button(1):  # B
                 speed = 70
                 set_speed_color(speed)
-            if joystick.get_button(2):
+            if joystick.get_button(2):  # X
                 speed = 100
                 set_speed_color(speed)
-            if joystick.get_button(3):
+            if joystick.get_button(3):  # Y
                 speed = 200
                 set_speed_color(speed)
 
-            # Joystick strength
             strength = math.sqrt(x_axis ** 2 + y_axis ** 2)
             if strength < DEADZONE:
-                strength = 0
+                strength = 0.0
 
-            # Compute heading and drive
             if strength > 0:
                 angle = math.degrees(math.atan2(-y_axis, x_axis)) - 90 + angle_offset
                 angle %= 360
@@ -148,26 +121,16 @@ with SpheroEduAPI(toy) as api:
             else:
                 api.set_speed(0)
 
-            # Draw UI
-            draw_text(f"Joystick: ({x_axis:.2f}, {y_axis:.2f})", (255, 255, 255), 10, 10)
-            draw_text(f"Angle: {angle:.2f}", (255, 255, 255), 10, 35)
-            draw_text(f"Angle Offset: {angle_offset:.2f}", (255, 255, 255), 10, 60)
-            draw_text(f"Speed: {speed}", (255, 255, 0), 10, 85)
-
-            rotated_arrow = pygame.transform.rotate(arrow_image, angle)
-            rect = rotated_arrow.get_rect(center=arrow_location)
-            screen.blit(rotated_arrow, rect.topleft)
-
-            # Check battery periodically
             if time.time() - last_battery_time >= BATTERY_CHECK_INTERVAL:
                 voltage = get_battery_level()
                 if voltage:
-                    print(f"Battery voltage: {voltage:.2f} V")
+                    print(f"[Battery] {voltage:.2f} V")
                 last_battery_time = time.time()
 
-            pygame.display.flip()
             clock.tick(FPS)
 
+    except KeyboardInterrupt:
+        print("\n👋 Exiting...")
     finally:
         api.set_speed(0)
         pygame.quit()
