@@ -136,7 +136,7 @@ with SpheroEduAPI(toy) as api:
                 y_axis_fixed = y_axis
 
                 # Calculate heading
-                heading = int((math.degrees(math.atan2(-y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
+                heading = int((math.degrees(math.atan2(y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
                 # Apply to Sphero
                 api._SpheroEduAPI__heading = heading
                 api.set_heading(heading)
