@@ -67,7 +67,6 @@ with SpheroEduAPI(toy) as api:
     # ----------------------------
     # Control Variables
     # ----------------------------
-    angle = 0
     angle_offset = 0
     speed = 50
     last_battery_time = time.time()
@@ -104,12 +103,10 @@ with SpheroEduAPI(toy) as api:
             button4=joystick.get_button(4)
             button5=joystick.get_button(5)
 
-            if button4:
-                angle_offset += 2
-                angle += 2
-            if button5:
-                angle_offset -= 2
-                angle -= 2
+            if button4:  # LB
+                angle_offset = (angle_offset + 2) % 360
+            if button5:  # RB
+                angle_offset = (angle_offset - 2) % 360
 
             # Speed tier buttons
             if joystick.get_button(0):  # A
@@ -134,9 +131,7 @@ with SpheroEduAPI(toy) as api:
                 x_axis_fixed = x_axis
                 y_axis_fixed = y_axis
                 heading = int((math.degrees(math.atan2(-y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
-                api._SpheroEduAPI__heading = heading
-                api.set_heading(heading)
-                api.set_speed(speed)
+                api.roll(speed, heading)
             else:
                 api.set_speed(0)
 
