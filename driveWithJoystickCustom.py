@@ -131,7 +131,7 @@ with SpheroEduAPI(toy) as api:
                 strength = 0.0
 
             if strength > 0:
-                x_axis_fixed = -x_axis  # flip left/right for NACON/Xbox
+                x_axis_fixed = x_axis  # flip left/right for NACON/Xbox
                 y_axis_fixed = y_axis
                 heading = int((math.degrees(math.atan2(-y_axis_fixed, x_axis_fixed)) + angle_offset) % 360)
                 api._SpheroEduAPI__heading = heading
